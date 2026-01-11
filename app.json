@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "Void Tracker",
+    "slug": "void-tracker",
+    "version": "1.0.0",
+    "scheme": "void-tracker",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#021a24"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.voidtracker.app",
+      "backgroundColor": "#021a24"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#021a24"
+      },
+      "package": "com.voidtracker.app",
+      "edgeToEdgeEnabled": true,
+      "navigationBar": {
+        "backgroundColor": "#021a24"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "backgroundColor": "#021a24"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-splash-screen"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6337ba85-3d50-47e0-bd0c-4d3022511791"
+      }
+    },
+    "owner": "praizada"
+  }
+}
