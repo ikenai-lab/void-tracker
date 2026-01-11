@@ -2,7 +2,7 @@
   <img src="./assets/icon.png" alt="Void Tracker" width="120" height="120" />
 </p>
 
-# 🌑 Void Tracker
+# Void Tracker
 
 A lo-fi habit tracking app with a dark, atmospheric aesthetic. Build positive habits and break negative ones with the help of the void.
 
