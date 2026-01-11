@@ -44,6 +44,11 @@ Quick-start your journey with curated habit bundles:
 - Set daily reminders for each habit
 - Local notifications at your chosen time
 
+### 🔊 Audio Feedback
+- **Habit Sounds**: Satisfying "set/unset" sound effects
+- **Focus Ambience**: Looping "Sleepy Cat" sound during deep work
+- **Sound Controls**: Toggle sounds easily from the Focus menu
+
 ## 🛠️ Tech Stack
 
 - **Framework:** React Native with Expo
