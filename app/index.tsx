@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WatcherAvatar, HabitSparklineCard } from '../src/components';
 import { COLORS, TYPOGRAPHY } from '../src/theme';
 import { useHabitStore } from '../src/stores';
+import { SoundManager } from '../src/utils/SoundManager';
 
 // Sample habits for testing
 const SAMPLE_HABITS = [
@@ -47,6 +48,7 @@ export default function DashboardScreen() {
     };
 
     const handleToggle = async (id: string) => {
+        await SoundManager.playHabitSound();
         await toggleHabit(id);
         await loadData();
     };

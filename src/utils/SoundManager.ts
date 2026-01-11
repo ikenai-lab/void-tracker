@@ -1,20 +1,20 @@
 /**
  * Sound Manager
  * 
- * Handles audio feedback for habit completion.
+ * Handles audio feedback for habit completion and focus timer.
  * Uses expo-av for audio playback.
- * 
- * Provides a satisfying "thock" or click sound when marking habits complete.
  */
 
 import { Audio } from 'expo-av';
 import { Platform } from 'react-native';
 
 // Sound object cache
-let completionSound: Audio.Sound | null = null;
+let habitSound: Audio.Sound | null = null;
+let focusSound: Audio.Sound | null = null;
 
-// A short "pop" sound from Mixkit (royalty-free)
-const COMPLETION_SOUND_URL = 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3';
+// Local sound files
+const HABIT_SOUND = require('../../assets/sounds/set-unset-habit.wav');
+const FOCUS_SOUND = require('../../assets/sounds/mixkit-sleepy-cat-135.mp3');
 
 export const SoundManager = {
     /**
@@ -26,16 +26,23 @@ export const SoundManager = {
             // Configure audio mode for best experience
             await Audio.setAudioModeAsync({
                 playsInSilentModeIOS: false, // Respect silent mode
-                staysActiveInBackground: false,
+                staysActiveInBackground: true, // Keep playing in background for focus timer
                 shouldDuckAndroid: true,
             });
 
-            // Preload completion sound
-            const { sound } = await Audio.Sound.createAsync(
-                { uri: COMPLETION_SOUND_URL },
-                { shouldPlay: false, volume: 0.5 }
+            // Preload habit completion sound
+            const { sound: hSound } = await Audio.Sound.createAsync(
+                HABIT_SOUND,
+                { shouldPlay: false, volume: 0.6 }
             );
-            completionSound = sound;
+            habitSound = hSound;
+
+            // Preload focus timer sound
+            const { sound: fSound } = await Audio.Sound.createAsync(
+                FOCUS_SOUND,
+                { shouldPlay: false, volume: 0.4, isLooping: true }
+            );
+            focusSound = fSound;
 
             console.log('[SoundManager] Sounds preloaded');
         } catch (error) {
@@ -44,35 +51,78 @@ export const SoundManager = {
     },
 
     /**
-     * Play the habit completion sound
-     * A short, satisfying "pop" or "thock"
+     * Play the habit toggle sound (complete/uncomplete)
      */
-    playCompletionSound: async (): Promise<void> => {
+    playHabitSound: async (): Promise<void> => {
         try {
-            if (!completionSound) {
+            if (!habitSound) {
                 // Lazy load if not preloaded
                 const { sound } = await Audio.Sound.createAsync(
-                    { uri: COMPLETION_SOUND_URL },
-                    { shouldPlay: true, volume: 0.5 }
+                    HABIT_SOUND,
+                    { shouldPlay: true, volume: 0.6 }
                 );
-                completionSound = sound;
+                habitSound = sound;
                 return;
             }
 
             // Rewind and play
-            await completionSound.setPositionAsync(0);
-            await completionSound.playAsync();
+            await habitSound.setPositionAsync(0);
+            await habitSound.playAsync();
         } catch (error) {
-            console.warn('[SoundManager] Failed to play completion sound:', error);
+            console.warn('[SoundManager] Failed to play habit sound:', error);
         }
     },
 
     /**
-     * Play the habit uncomplete sound (softer, reverse feedback)
+     * Start playing focus timer ambient sound (loops)
      */
-    playUncompleteSound: async (): Promise<void> => {
-        // For now, we just don't play a sound on uncomplete
-        // Could add a softer "click" sound here later
+    playFocusSound: async (): Promise<void> => {
+        try {
+            if (!focusSound) {
+                // Lazy load if not preloaded
+                const { sound } = await Audio.Sound.createAsync(
+                    FOCUS_SOUND,
+                    { shouldPlay: true, volume: 0.4, isLooping: true }
+                );
+                focusSound = sound;
+                return;
+            }
+
+            // Set to loop and play from start
+            await focusSound.setIsLoopingAsync(true);
+            await focusSound.setPositionAsync(0);
+            await focusSound.playAsync();
+        } catch (error) {
+            console.warn('[SoundManager] Failed to play focus sound:', error);
+        }
+    },
+
+    /**
+     * Stop the focus timer sound
+     */
+    stopFocusSound: async (): Promise<void> => {
+        try {
+            if (focusSound) {
+                await focusSound.stopAsync();
+            }
+        } catch (error) {
+            console.warn('[SoundManager] Failed to stop focus sound:', error);
+        }
+    },
+
+    /**
+     * Check if focus sound is currently playing
+     */
+    isFocusSoundPlaying: async (): Promise<boolean> => {
+        try {
+            if (focusSound) {
+                const status = await focusSound.getStatusAsync();
+                return status.isLoaded && status.isPlaying;
+            }
+            return false;
+        } catch {
+            return false;
+        }
     },
 
     /**
@@ -80,9 +130,14 @@ export const SoundManager = {
      */
     unload: async (): Promise<void> => {
         try {
-            if (completionSound) {
-                await completionSound.unloadAsync();
-                completionSound = null;
+            if (habitSound) {
+                await habitSound.unloadAsync();
+                habitSound = null;
+            }
+            if (focusSound) {
+                await focusSound.stopAsync();
+                await focusSound.unloadAsync();
+                focusSound = null;
             }
             console.log('[SoundManager] Sounds unloaded');
         } catch (error) {

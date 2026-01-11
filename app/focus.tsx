@@ -16,9 +16,11 @@ import Animated, {
     cancelAnimation,
 } from 'react-native-reanimated';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import { Volume2, VolumeX } from 'lucide-react-native';
 
 import { COLORS, TYPOGRAPHY } from '../src/theme';
 import { useFocusStore } from '../src/stores/useFocusStore';
+import { SoundManager } from '../src/utils/SoundManager';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -38,8 +40,10 @@ const RADIUS = (CIRCLE_SIZE - STROKE_WIDTH) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export default function FocusScreen() {
-    // Focus store for hiding VoidDock
+    // Focus store for hiding VoidDock and sound preference
     const setFocusMode = useFocusStore(state => state.setFocusMode);
+    const soundEnabled = useFocusStore(state => state.soundEnabled);
+    const toggleSound = useFocusStore(state => state.toggleSound);
 
     // Timer state
     const [selectedMinutes, setSelectedMinutes] = useState(30);
@@ -97,7 +101,7 @@ export default function FocusScreen() {
     };
 
     // Start timer
-    const startTimer = () => {
+    const startTimer = async () => {
         if (remainingSeconds <= 0) return;
 
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -105,26 +109,37 @@ export default function FocusScreen() {
         enterFocusMode();
         setIsPaused(false);
         startBreathing();
+
+        // Start focus sound if enabled
+        if (soundEnabled) {
+            await SoundManager.playFocusSound();
+        }
     };
 
     // Pause timer
-    const pauseTimer = () => {
+    const pauseTimer = async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setIsRunning(false);
         setIsPaused(true);
         stopBreathing();
+        await SoundManager.stopFocusSound();
     };
 
     // Resume timer
-    const resumeTimer = () => {
+    const resumeTimer = async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setIsRunning(true);
         setIsPaused(false);
         startBreathing();
+
+        // Resume focus sound if enabled
+        if (soundEnabled) {
+            await SoundManager.playFocusSound();
+        }
     };
 
     // Stop timer (yellow button)
-    const stopTimer = () => {
+    const stopTimer = async () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         setIsRunning(false);
         exitFocusMode();
@@ -132,6 +147,21 @@ export default function FocusScreen() {
         setRemainingSeconds(selectedMinutes * 60);
         setTotalSeconds(selectedMinutes * 60);
         stopBreathing();
+        await SoundManager.stopFocusSound();
+    };
+
+    // Toggle sound during focus
+    const handleToggleSound = async () => {
+        Haptics.selectionAsync();
+        toggleSound();
+
+        if (soundEnabled && isRunning) {
+            // Currently on, turning off
+            await SoundManager.stopFocusSound();
+        } else if (!soundEnabled && isRunning) {
+            // Currently off, turning on
+            await SoundManager.playFocusSound();
+        }
     };
 
     // Timer tick effect
@@ -144,6 +174,7 @@ export default function FocusScreen() {
             setIsRunning(false);
             stopBreathing();
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            SoundManager.stopFocusSound();
         }
 
         return () => {
@@ -157,6 +188,7 @@ export default function FocusScreen() {
             exitFocusMode();
             if (breathIntervalRef.current) clearInterval(breathIntervalRef.current);
             if (timerRef.current) clearTimeout(timerRef.current);
+            SoundManager.stopFocusSound();
         };
     }, []);
 
@@ -201,6 +233,19 @@ export default function FocusScreen() {
                 <StatusBar backgroundColor={OLED_BLACK} barStyle="light-content" />
 
                 {/* Circular Timer with Eyes */}
+                {/* Sound Prompt in Focus Mode (Top Right) */}
+                <Pressable
+                    style={styles.focusSoundToggle}
+                    onPress={handleToggleSound}
+                    hitSlop={20}
+                >
+                    {soundEnabled ? (
+                        <Volume2 size={24} color={COLORS.bioOrange} strokeWidth={2} />
+                    ) : (
+                        <VolumeX size={24} color="rgba(255, 255, 255, 0.3)" strokeWidth={2} />
+                    )}
+                </Pressable>
+
                 <Pressable
                     style={styles.circleContainer}
                     onPress={isRunning ? pauseTimer : resumeTimer}
@@ -331,10 +376,28 @@ export default function FocusScreen() {
                 ))}
             </View>
 
-            {/* Start Button */}
-            <Pressable style={styles.startButton} onPress={startTimer}>
-                <Text style={styles.startButtonText}>START</Text>
-            </Pressable>
+            {/* Actions Row */}
+            <View style={styles.actionsRow}>
+                {/* Sound Toggle */}
+                <Pressable
+                    style={[styles.soundConfigButton, soundEnabled && styles.soundConfigButtonActive]}
+                    onPress={() => {
+                        Haptics.selectionAsync();
+                        toggleSound();
+                    }}
+                >
+                    {soundEnabled ? (
+                        <Volume2 size={24} color={COLORS.bioOrange} />
+                    ) : (
+                        <VolumeX size={24} color={COLORS.mist} />
+                    )}
+                </Pressable>
+
+                {/* Start Button */}
+                <Pressable style={styles.startButton} onPress={startTimer}>
+                    <Text style={styles.startButtonText}>START</Text>
+                </Pressable>
+            </View>
 
             {/* Spacer for VoidDock */}
             <View style={{ height: 140 }} />
@@ -412,6 +475,24 @@ const styles = StyleSheet.create({
         color: COLORS.voidBlue,
         letterSpacing: 3,
     },
+    actionsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
+    },
+    soundConfigButton: {
+        paddingVertical: 18,
+        paddingHorizontal: 28,
+        borderRadius: 30,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.15)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    soundConfigButtonActive: {
+        borderColor: COLORS.bioOrange,
+        backgroundColor: 'rgba(255, 159, 28, 0.1)',
+    },
 
     // Focus mode styles
     focusContainer: {
@@ -421,6 +502,15 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         zIndex: 999,
     },
+    focusSoundToggle: {
+        position: 'absolute',
+        top: 60,
+        right: 30,
+        padding: 10,
+        opacity: 0.8,
+        zIndex: 1000,
+    },
+
     circleContainer: {
         width: CIRCLE_SIZE,
         height: CIRCLE_SIZE,

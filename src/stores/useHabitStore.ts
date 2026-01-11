@@ -170,9 +170,7 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
                     };
                     set({ _webLogs: [..._webLogs, newLog] });
                     console.log(`[HabitStore] Completed habit ${habitId} for ${targetDateKey}`);
-                    // Play completion sound
-                    const { SoundManager } = require('../utils/SoundManager');
-                    SoundManager.playCompletionSound();
+
                 }
             } else {
                 // Native: Use SQLite
@@ -198,9 +196,7 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
                         completedAt: new Date(),
                     });
                     console.log(`[HabitStore] Completed habit ${habitId} for ${targetDateKey}`);
-                    // Play completion sound
-                    const { SoundManager } = require('../utils/SoundManager');
-                    SoundManager.playCompletionSound();
+
                 }
             }
 
